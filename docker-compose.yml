@@ -1,0 +1,65 @@
+services:
+
+  client:
+    build:
+      context: .
+      target: build-node
+    command: npm run dev
+    volumes:
+      - .:/home/node/app
+      # node_modules is not shared with the host
+      - /home/node/app/node_modules
+      - client:/home/node/app/client/dist
+
+  # db:
+  #   image: postgres:16-alpine
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data/
+  #     - .data/db_dumps:/db_dumps
+  #   healthcheck:
+  #     test: pg_isready -U postgres -d moviedemo
+  #     interval: 5s
+  #     timeout: 10s
+  #     retries: 120
+  #   environment:
+  #     - POSTGRES_DB=moviedemo
+  #     - POSTGRES_PASSWORD=postgres
+
+  app:
+    <<: &COMMON
+      build:
+        context: .
+        target: build-python
+        args:
+          PY_REQUIREMENTS_FILE: requirements-dev.txt
+      environment:
+        - DEBUG=true
+        - DJANGO_ENV=development
+        # - DATABASE_URL=postgres://postgres:postgres@db:5432/moviedemo
+        - SECRET_KEY=not-secret
+      restart: on-failure
+      # depends_on:
+      #   db:
+      #     condition: service_healthy
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - ${PORT:-8000}:8000
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/app
+      - /app/.venv
+      - /app/moviedemo.egg-info
+      - client:/app/client/dist
+
+  django-migrate:
+    <<: *COMMON
+    command: python manage.py migrate --noinput
+    volumes:
+      - .:/app
+      - /app/.venv
+      - /app/moviedemo.egg-info
+
+volumes:
+  client:
+  pgdata:

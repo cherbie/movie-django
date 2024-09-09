@@ -1,0 +1,10 @@
+*.pyc
+__pycache__
+.venv
+/.ruff_cache
+*.egg-info
+/moviedemo.yml
+/staticfiles
+.vscode
+
+/node_modules
